@@ -1,4 +1,5 @@
-<img width="1453" height="229" alt="image" src="https://github.com/user-attachments/assets/487770a6-5bf7-462f-9db7-fe4b4087f8ec" />
+<img width="1275" height="585" alt="image" src="https://github.com/user-attachments/assets/515d0ab9-ab53-4254-b2d1-5565c48ffc3c" />
+
 
 # Goroks 
 
