@@ -1,6 +1,6 @@
 <img width="1453" height="229" alt="image" src="https://github.com/user-attachments/assets/487770a6-5bf7-462f-9db7-fe4b4087f8ec" />
 
-# Go Source Recon Toolkit
+# Goroks 
 
 Automated reconnaissance and exploitation pipeline for discovering exposed **Go application source code**, **backup files**, and **misconfigured Git repositories**.
 
