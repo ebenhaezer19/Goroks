@@ -1,5 +1,204 @@
 <img width="1453" height="229" alt="image" src="https://github.com/user-attachments/assets/487770a6-5bf7-462f-9db7-fe4b4087f8ec" />
 
+# Go Source Recon Toolkit
+
+Automated reconnaissance and exploitation pipeline for discovering exposed **Go application source code**, **backup files**, and **misconfigured Git repositories**.
+
+---
+
+## 📌 Overview
+
+This toolkit is designed to streamline **web reconnaissance** specifically targeting:
+
+* Exposed `.go` source files
+* Backup artifacts (`.bak`, `.old`, `.swp`, etc.)
+* Misconfigured `.git` directories
+* Sensitive information leakage
+* Potential RCE indicators
+
+It integrates multiple phases into a **single automated pipeline**, reducing manual effort during initial pentesting.
+
+---
+
+## ⚙️ Features
+
+### 1. Fingerprinting
+
+* Detects Go-based applications using:
+
+  * HTTP headers
+  * Response body heuristics (Gin, Echo, Fiber)
+  * `/debug/pprof` endpoint
+
+### 2. Surface Discovery (FFUF)
+
+* Fuzzing endpoints using custom Go-focused wordlist
+* Supports:
+
+  * Redirect following
+  * Auto-calibration
+  * Status-based filtering
+
+### 3. Sensitive File Detection
+
+* Identifies exposed:
+
+  * `.env`
+  * `.go`
+  * config files
+* Searches for:
+
+  * `password`
+  * `token`
+  * `secret`
+  * `key`
+
+### 4. Git Exposure Exploitation
+
+* Detects `.git` exposure
+* Dumps repository using `GitTools`
+* Reconstructs working directory
+* Extracts:
+
+  * Secrets
+  * Credentials
+  * API keys
+
+### 5. Static Code Analysis
+
+* Searches for dangerous patterns:
+
+  * `exec`
+  * `system`
+  * `popen`
+  * `subprocess`
+
+### 6. Basic RCE Detection
+
+* Reflection-based testing
+* Time-based detection (`sleep` payload)
+
+---
+
+## 🛠️ Requirements
+
+Install dependencies:
+
+```bash
+apt update
+apt install -y curl jq git ffuf
+```
+
+Clone GitTools:
+
+```bash
+git clone https://github.com/internetwache/GitTools.git
+```
+
+---
+
+## 🚀 Usage
+
+```bash
+chmod +x go_source_recon.sh
+./go_source_recon.sh http://target.com
+```
+
+---
+
+## 📂 Output Structure
+
+```
+recon_YYYYMMDD_HHMMSS/
+├── headers.txt
+├── ffuf.json
+├── urls.txt
+├── sensitive.txt
+├── rce.txt
+├── secrets.txt
+├── rce_candidates.txt
+├── report.txt
+└── git_dump/
+    └── .git/
+```
+
+---
+
+## 📊 Example Output
+
+```
+[HIGH] Git exposed!
+[LOW] Reflection via cmd
+[LOW] Reflection via exec
+```
+
+---
+
+## 🔍 Example Findings
+
+| Type           | Severity | Description                |
+| -------------- | -------- | -------------------------- |
+| `.git exposed` | HIGH     | Full source code leakage   |
+| `.env exposed` | HIGH     | Credentials disclosure     |
+| Reflection     | LOW      | Input reflected (not RCE)  |
+| Time-based RCE | CRITICAL | Possible command execution |
+
+---
+
+## ⚠️ Important Notes
+
+* Tool ini **tidak menjamin RCE**, hanya mendeteksi indikasi awal
+* Banyak false positive pada:
+
+  * Reflection
+  * Static responses
+* Validasi manual tetap wajib
+
+---
+
+## 🔐 Legal Disclaimer
+
+This tool is intended for:
+
+* Authorized penetration testing
+* Security research
+* Educational purposes
+
+**Do not use against systems without explicit permission.**
+
+---
+
+## 🧠 Next Improvements (Roadmap)
+
+* Integrasi dengan:
+
+  * `nuclei`
+  * `httpx`
+  * `katana`
+* Advanced Go binary analysis
+* Endpoint crawling (JS parsing)
+* Parameter fuzzing
+
+---
+
+## 👨‍💻 Author
+
+Developed for advanced **web application reconnaissance & exploitation workflows**.
+
+---
+
+## ⭐ Contribution
+
+Pull requests are welcome. For major changes, open an issue first.
+
+---
+
+## 📜 License
+
+MIT License
+
+---
+
 
 cd ~/go-pentest
 
