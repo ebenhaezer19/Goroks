@@ -85,6 +85,7 @@ It integrates multiple phases into a **single automated pipeline**, reducing man
 Install dependencies:
 
 ```bash
+Make on root node and path ex: /root/go-pentest/Goroks
 apt update
 apt install -y curl jq git ffuf
 ```
