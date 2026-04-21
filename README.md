@@ -21,6 +21,9 @@ It integrates multiple phases into a **single automated pipeline**, reducing man
 
 ---
 
+<img width="967" height="645" alt="image" src="https://github.com/user-attachments/assets/46ce889d-4dc6-4d04-bd04-2f7175538237" />
+
+
 ## ⚙️ Features
 
 ### 1. Fingerprinting
