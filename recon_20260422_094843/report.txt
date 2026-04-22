@@ -1,0 +1,17 @@
+TARGET: https://github.com/Monibuca/plugin-logrotate/blob/v4/grep_linux.go
+TECH: go
+
+--- FINDINGS ---
+Git Exposure: NO
+
+Sensitive Files:
+
+
+RCE Params:
+cmd
+exec
+command
+
+Secrets (sample):
+
+
