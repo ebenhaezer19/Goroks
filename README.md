@@ -6,8 +6,6 @@
 
 <img width="967" height="645" alt="image" src="https://github.com/user-attachments/assets/46ce889d-4dc6-4d04-bd04-2f7175538237" />
 
-# 🧠 Go Source Recon Engine (Goroks)
-
 A lightweight **Go-oriented web reconnaissance engine** designed for:
 - endpoint discovery
 - crawling-based attack surface mapping
