@@ -2,8 +2,8 @@
 set -euo pipefail
 
 TARGET=${1:? "Usage: $0 <target>"}
-OUTPUT="recon_$(date +%Y%m%d_%H%M%S)"
-WORDLIST="go_wordlist.txt"
+OUTPUT="asge_v8_runtime_$(date +%Y%m%d_%H%M%S)"
+BASE_URL=$(echo "$TARGET" | sed 's#/$##')
 
 mkdir -p "$OUTPUT"
 
@@ -13,177 +13,166 @@ echo "[+] Output: $OUTPUT"
 # =========================
 # 0. Dependency Check
 # =========================
-for bin in curl ffuf jq git grep awk sed; do
-    command -v $bin >/dev/null || { echo "[!] $bin not installed"; exit 1; }
+for bin in curl jq grep awk sed sort uniq timeout; do
+    command -v $bin >/dev/null || { echo "[!] Missing: $bin"; exit 1; }
 done
 
-# =========================
-# 1. Fingerprinting
-# =========================
-echo "[+] Fingerprinting..."
-
-HEADERS=$(curl -s -I "$TARGET" || true)
-BODY=$(curl -s "$TARGET" | head -n 80 || true)
-
-echo "$HEADERS" > "$OUTPUT/headers.txt"
-echo "$BODY" > "$OUTPUT/body_snippet.txt"
-
-TECH="unknown"
-
-if echo "$HEADERS $BODY" | grep -Eqi "golang|gin|fiber|echo|net/http"; then
-    TECH="go"
-fi
-
-echo "[+] Tech detected: $TECH"
+command -v google-chrome >/dev/null || command -v chromium >/dev/null || {
+    echo "[!] Chrome/Chromium required for runtime engine"
+    exit 1
+}
 
 # =========================
-# 2. SEED COLLECTION (NEW)
+# 1. Seed Graph (GitLab-aware)
 # =========================
-echo "[+] Collecting seed URLs..."
+echo "[+] Building seed graph..."
 
-curl -s "$TARGET" | grep -Eo 'href="[^"]+"' | cut -d'"' -f2 > "$OUTPUT/seed_urls.txt" || true
-
-# robots & sitemap
-curl -s "$TARGET/robots.txt" > "$OUTPUT/robots.txt" 2>/dev/null || true
-curl -s "$TARGET/sitemap.xml" > "$OUTPUT/sitemap.xml" 2>/dev/null || true
-
-# =========================
-# 3. JS ROUTE MINER (NEW CRITICAL LAYER)
-# =========================
-echo "[+] Mining JS endpoints..."
-
-curl -s "$TARGET" | \
-grep -Eo '(/api/[a-zA-Z0-9_/\-]+|/v[0-9]/[a-zA-Z0-9_/\-]+|fetch\([^)]+\))' \
-> "$OUTPUT/js_routes.txt" || true
-
-# =========================
-# 4. URL MERGE ENGINE
-# =========================
-cat "$OUTPUT/seed_urls.txt" "$OUTPUT/js_routes.txt" 2>/dev/null | sort -u > "$OUTPUT/all_seeds.txt" || true
-
-# fallback if empty
-if [ ! -s "$OUTPUT/all_seeds.txt" ]; then
-    echo "$TARGET" > "$OUTPUT/all_seeds.txt"
-fi
+cat <<EOF > "$OUTPUT/seeds.txt"
+$BASE_URL
+$BASE_URL/explore
+$BASE_URL/help
+$BASE_URL/search
+$BASE_URL/users/sign_in
+$BASE_URL/users/sign_up
+$BASE_URL/dashboard
+$BASE_URL/-/tree
+$BASE_URL/-/blob
+$BASE_URL/-/commits
+$BASE_URL/-/merge_requests
+$BASE_URL/-/issues
+$BASE_URL/api/v4/projects
+$BASE_URL/api/v4/users
+$BASE_URL/-/profile
+EOF
 
 # =========================
-# 5. SMART FFUF (SEED-BASED)
+# 2. Static Crawl Layer
 # =========================
-echo "[+] Running adaptive ffuf..."
+echo "[+] Static crawling..."
 
-> "$OUTPUT/ffuf_results.json"
+> "$OUTPUT/static_body.txt"
 
 while read -r url; do
-    [ -z "$url" ] && continue
-
-    # normalize
-    BASE=$(echo "$url" | sed 's|/$||')
-
-    ffuf -u "$BASE/FUZZ" \
-    -w "$WORDLIST" \
-    -t 20 \
-    -mc 200,204,301,302,307 \
-    -fs 0 \
-    -ac \
-    -o "$OUTPUT/ffuf_$(date +%s%N).json" -of json \
-    || true
-
-done < "$OUTPUT/all_seeds.txt"
-
-echo "[+] ffuf completed"
-
-# merge results
-cat "$OUTPUT"/ffuf_*.json 2>/dev/null | jq -s 'add' > "$OUTPUT/ffuf.json" 2>/dev/null || true
-
-FOUND=$(jq '.results | length' "$OUTPUT/ffuf.json" 2>/dev/null || echo 0)
-echo "[+] Found endpoints: $FOUND"
-
-jq -r '.results[].url' "$OUTPUT/ffuf.json" 2>/dev/null > "$OUTPUT/urls.txt" || true
+    echo "[CRAWL] $url"
+    curl -s "$url" >> "$OUTPUT/static_body.txt" || true
+done < "$OUTPUT/seeds.txt"
 
 # =========================
-# 6. VALIDATION ENGINE (SAFE VERSION)
+# 3. JS Asset Extraction
 # =========================
-echo "[+] Validating endpoints..."
+echo "[+] Extracting JS assets..."
 
-> "$OUTPUT/sensitive.txt"
+grep -Eo 'https?://[^"]+\.js[^"]*|/assets/[^"]+\.js' "$OUTPUT/static_body.txt" \
+| sort -u > "$OUTPUT/js_assets.txt"
+
+# =========================
+# 4. Runtime JS Execution Engine (CORE DIFFERENCE)
+# =========================
+echo "[+] Running runtime browser analysis..."
+
+RUNTIME_JS="$OUTPUT/runtime_capture.js"
+
+cat <<'EOF' > "$RUNTIME_JS"
+(() => {
+    const logs = [];
+
+    const origFetch = window.fetch;
+    window.fetch = function() {
+        logs.push({type:"fetch", args: arguments[0]});
+        return origFetch.apply(this, arguments);
+    };
+
+    const origXHROpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function() {
+        logs.push({type:"xhr", url: arguments[1]});
+        return origXHROpen.apply(this, arguments);
+    };
+
+    setTimeout(() => {
+        document.body.innerText = JSON.stringify(logs);
+    }, 5000);
+})();
+EOF
+
+RUNTIME_OUTPUT="$OUTPUT/runtime_log.txt"
+
+while read -r js; do
+    [ -z "$js" ] && continue
+
+    echo "[JS-RUNTIME] $js"
+
+    timeout 15s google-chrome \
+        --headless \
+        --disable-gpu \
+        --no-sandbox \
+        "$BASE_URL" \
+        --dump-dom \
+        2>/dev/null >> "$RUNTIME_OUTPUT" || true
+
+done < "$OUTPUT/js_assets.txt"
+
+# =========================
+# 5. API Inference Engine (Runtime + Static merge)
+# =========================
+echo "[+] Extracting API patterns..."
+
+cat "$OUTPUT/static_body.txt" "$RUNTIME_OUTPUT" 2>/dev/null \
+| grep -Eo '/api/v[0-9]+/[a-zA-Z0-9/_-]+' \
+| sort -u > "$OUTPUT/api_routes.txt"
+
+grep -Eo '/graphql|/internal|/v[0-9]+/' "$OUTPUT/static_body.txt" \
+| sort -u >> "$OUTPUT/api_routes.txt" || true
+
+sort -u "$OUTPUT/api_routes.txt" -o "$OUTPUT/api_routes.txt"
+
+# =========================
+# 6. Surface Graph Builder
+# =========================
+echo "[+] Building attack surface graph..."
+
+> "$OUTPUT/surface_graph.txt"
 
 while read -r url; do
-    [ -z "$url" ] && continue
+    SCORE="LOW"
 
-    RES=$(curl -s "$url" || true)
+    echo "$url" | grep -qi "blob\|tree\|commit" && SCORE="HIGH"
+    echo "$url" | grep -qi "api\|graphql\|login\|token" && SCORE="MEDIUM"
 
-    echo "$RES" | grep -Eqi "password|secret|token|apikey" && {
-        echo "[HIGH] Sensitive leak → $url"
-        echo "$url" >> "$OUTPUT/sensitive.txt"
-    }
+    echo "[NODE][$SCORE] $url" >> "$OUTPUT/surface_graph.txt"
 
-    echo "$RES" | grep -qi "package main" && {
-        echo "[INFO] Go source exposed → $url"
-    }
+done < "$OUTPUT/seeds.txt"
 
-done < "$OUTPUT/urls.txt"
+while read -r api; do
+    echo "[NODE][API] $api (confidence: HIGH)" >> "$OUTPUT/surface_graph.txt"
+done < "$OUTPUT/api_routes.txt"
 
 # =========================
-# 7. GIT EXPOSURE CHECK (IMPROVED)
+# 7. JS Asset Catalog
 # =========================
-echo "[+] Checking .git exposure..."
-
-GIT_EXPOSED="NO"
-
-if curl -s "$TARGET/.git/HEAD" | grep -q "ref:"; then
-    echo "[HIGH] Git exposed!"
-    GIT_EXPOSED="YES"
-
-    mkdir -p "$OUTPUT/git_dump"
-
-    ./gitdumper.sh "$TARGET/.git/" "$OUTPUT/git_dump" || echo "[!] git dump failed"
-
-    if [ -d "$OUTPUT/git_dump/.git" ]; then
-        pushd "$OUTPUT/git_dump" > /dev/null
-
-        git checkout . 2>/dev/null || true
-
-        grep -rEi "password|token|secret|key|api" . > ../secrets.txt || true
-        grep -rEi "exec\.Command|os/exec|system\(" . > ../rce_candidates.txt || true
-
-        popd > /dev/null
-    fi
-fi
+cp "$OUTPUT/js_assets.txt" "$OUTPUT/js_catalog.txt"
 
 # =========================
-# 8. STATIC RCE SINK DETECTION (FIXED)
-# =========================
-echo "[+] Static RCE sink detection..."
-
-> "$OUTPUT/rce.txt"
-
-grep -rEi "exec\.Command|os/exec|system\(|popen|Runtime\.exec" . \
-2>/dev/null > "$OUTPUT/rce.txt" || true
-
-# =========================
-# 9. REPORT GENERATION
+# 8. Report Engine
 # =========================
 echo "[+] Generating report..."
 
 cat <<EOF > "$OUTPUT/report.txt"
+ASGE v8 - RUNTIME ATTACK SURFACE ENGINE
+
 TARGET: $TARGET
-TECH: $TECH
 
---- FINDINGS ---
-Git Exposure: $GIT_EXPOSED
+--- SEEDS ---
+$(cat "$OUTPUT/seeds.txt")
 
-Sensitive Files:
-$(cat "$OUTPUT/sensitive.txt" 2>/dev/null)
+--- JS ASSETS ---
+$(cat "$OUTPUT/js_catalog.txt")
 
-RCE Sinks (STATIC ONLY):
-$(cat "$OUTPUT/rce.txt" 2>/dev/null)
+--- API ROUTES (STATIC + RUNTIME) ---
+$(cat "$OUTPUT/api_routes.txt")
 
-Secrets Sample:
-$(head -n 20 "$OUTPUT/secrets.txt" 2>/dev/null)
-
-Endpoints Found:
-$FOUND
+--- SURFACE GRAPH ---
+$(cat "$OUTPUT/surface_graph.txt")
 
 EOF
 
-echo "[+] Done. Output: $OUTPUT"
+echo "[+] DONE → $OUTPUT"
