@@ -1,55 +1,123 @@
-
-
 ---
 
 # GOROKS
 
 <img width="967" height="645" alt="image" src="https://github.com/user-attachments/assets/46ce889d-4dc6-4d04-bd04-2f7175538237" />
 
-A lightweight **Go-oriented web reconnaissance engine** designed for:
-- endpoint discovery
-- crawling-based attack surface mapping
-- Go web application fingerprinting
-- sensitive exposure detection
-- git repository leakage analysis
+## GOROKS (Graph-Oriented Recon & Observation Kernel System)
+
+
+GOROKS adalah **attack surface intelligence engine berbasis graph** yang dirancang untuk analisis keamanan aplikasi web modern (GitLab, Go service, REST API, dan hybrid SPA backend).
 
 ---
 
-## ⚙️ Features
+## ⚙️ Core Capabilities (v8 Architecture)
 
-### 🔍 Recon Capabilities
-- Crawl-based endpoint discovery (not blind brute-force)
-- JS route mining (`/api`, `/v1`, `/users`, etc.)
-- FFUF adaptive fuzzing (seed-driven)
-- Git exposure detection (`.git/HEAD`)
-- Sensitive keyword detection (token, password, secret, api key)
-- Go project structure awareness
+### 1. 🔍 Surface Discovery Engine
 
-### 🧠 Intelligence Layer
-- Seed generation from crawling
-- JS endpoint extraction
-- Smart FFUF execution per discovered surface
-- Multi-target aggregation report
+* Crawl deterministic + seeded BFS graph expansion
+* Endpoint inference berbasis:
+
+  * GitLab routing schema
+  * Go net/http pattern inference
+  * SPA JS route extraction
 
 ---
 
-## 📦 Requirements
+### 2. 🧠 JS AST Deep API Extraction (v8 upgrade)
 
-Make sure these tools are installed:
+* Parsing pola:
+
+  * `fetch()`
+  * `axios.*`
+  * `XMLHttpRequest`
+* Endpoint reconstruction:
+
+  * `/api/v1/*`
+  * `/graphql`
+  * `/mutation`
+* Context-aware endpoint normalization
+
+---
+
+### 3. 🧩 Graph Attack Path Simulation
+
+* Build directed graph:
+
+```
+[Entry Point]
+   → /login
+   → /dashboard
+   → /api/v1/user
+   → /api/v1/admin
+```
+
+* Edge weight:
+
+  * auth barrier
+  * privilege delta
+  * API sensitivity
+
+---
+
+### 4. 🔐 Auth Boundary Modeling
+
+Klasifikasi endpoint:
+
+| Type     | Description                 |
+| -------- | --------------------------- |
+| PUBLIC   | No authentication required  |
+| AUTH     | Requires session/token      |
+| ADMIN    | Elevated privilege required |
+| INTERNAL | Hidden service route        |
+
+---
+
+### 5. ⚠️ Severity Scoring Engine
+
+Model risk:
+
+```
+Risk = Exposure + Privilege Impact + Data Sensitivity + Chaining Depth
+```
+
+Kategori:
+
+| Score | Level    |
+| ----- | -------- |
+| 0–3   | LOW      |
+| 4–6   | MEDIUM   |
+| 7–8   | HIGH     |
+| 9–10  | CRITICAL |
+
+---
+
+### 6. 🔗 Endpoint Chaining (CVE-style mapping)
+
+Contoh:
+
+```
+/login → /api/user → /api/admin → /internal/debug
+```
+
+Digunakan untuk:
+
+* privilege escalation simulation
+* lateral movement analysis
+
+---
+
+## 📦 Dependencies
 
 ```bash
 curl
 ffuf
 jq
-git
 grep
 awk
 sed
-
-Optional (for git exploitation module):
-
-```bash
-GitTools (gitdumper.sh)
+bash 4+
+chromium (optional runtime AST mode)
 ```
 
 ---
@@ -67,51 +135,99 @@ chmod +x go_source_recon.sh
 ## ▶️ Usage
 
 ```bash
-./go_source_recon.sh <target_url>
+./go_source_recon.sh <target>
 ```
 
 Example:
 
 ```bash
-./go_source_recon.sh https://git.ustc.edu.cn/
+./go_source_recon.sh https://git.example.com
 ```
 
 ---
 
-## 📁 Output Structure
+## 🧱 Pipeline Architecture
 
-Each run generates:
-
-```text
-recon_YYYYMMDD_HHMMSS/
-├── headers.txt
-├── body.txt
-├── crawl_seed.txt
-├── js_routes.txt
-├── seeds.txt
-├── ffuf.json
-├── urls.txt
-├── sensitive.txt
-├── rce_candidates.txt
-├── report.txt
-└── git_dump/ (if exposed)
 ```
+Fingerprinting
+   ↓
+Seed Graph Builder
+   ↓
+GitLab Intelligence Layer
+   ↓
+JS Asset Extraction
+   ↓
+AST API Mining
+   ↓
+Graph Construction Engine
+   ↓
+Auth Boundary Classifier
+   ↓
+Chaining Simulator
+   ↓
+Risk Scoring Engine
+   ↓
+Report Generator
+```
+
+---
+
+## 📁 Output Structure (v8)
+
+```
+asge_v8_*/
+├── headers.txt
+├── body_snippet.txt
+├── seeds.txt
+├── urls.txt
+├── js_assets.txt
+├── js_routes.txt
+├── surface_map.txt
+├── graph.json
+├── auth_model.json
+├── risk_score.json
+├── chain_paths.txt
+└── report.txt
+```
+
+---
+
+## 📊 Surface Map Format
+
+```
+[SOURCE][WEB][HIGH][AUTH] /api/v1/admin/users
+[SOURCE][WEB][MEDIUM][AUTH] /api/v1/projects
+[SOURCE][WEB][LOW][PUBLIC] /help
+```
+
+---
+
+## 🧠 Key Innovation (v8)
+
+### Before (v7)
+
+* URL enumeration
+* basic fuzzing
+* static JS grep
+
+### Now (v8)
+
+* attack graph reasoning
+* endpoint dependency chaining
+* privilege modeling
+* risk scoring engine
 
 ---
 
 ## ⚠️ Known Issues
 
-### ❌ Bash CRLF Error
+### CRLF Bash Error
 
-If you see:
-
-```text
+```
 /usr/bin/env: ‘bash\r’: No such file or directory
 ```
 
-This is caused by **Windows line endings (CRLF)**.
-
-### 🔧 Fix:
+Fix:
 
 ```bash
 dos2unix go_source_recon.sh
@@ -123,115 +239,77 @@ Verify:
 head -n 1 go_source_recon.sh | cat -A
 ```
 
-Expected output:
+Expected:
 
-```bash
+```
 #!/usr/bin/env bash$
 ```
 
-If you see `^M` → still broken.
+---
+
+## 🔐 Security Boundary
+
+Tool ini dirancang untuk:
+
+* Security research
+* Internal AppSec testing
+* Authorized penetration testing
+* Attack surface auditing
+
+❌ Dilarang:
+
+* scanning sistem tanpa izin
+* exploitation aktif
+* data exfiltration
 
 ---
 
-<img width="1275" height="585" alt="image" src="https://github.com/user-attachments/assets/515d0ab9-ab53-4254-b2d1-5565c48ffc3c" />
-
-## 🔐 Security Notes
-
-This tool may detect:
-
-* exposed Git repositories
-* sensitive environment variables
-* internal API routes
-* debug endpoints
-
-⚠️ Use only on systems you own or have explicit permission to test.
-
----
-
-## 🧠 Architecture Overview
+## 🧭 Architecture Summary
 
 ```
-Target URL
+Internet Surface
    ↓
-Fingerprinting
+Graph Builder
    ↓
-Crawler (HTML + JS)
+API & JS AST Extractor
    ↓
-Seed Generation
+Auth Model Engine
    ↓
-Smart FFUF
+Attack Path Simulator
    ↓
-Validation Layer
+Risk Engine
    ↓
-Report Generator
+Report Layer
 ```
-
----
-
-## 📊 Output Meaning
-
-| File          | Description                   |
-| ------------- | ----------------------------- |
-| headers.txt   | HTTP response headers         |
-| body.txt      | initial HTML snapshot         |
-| js_routes.txt | extracted API endpoints       |
-| seeds.txt     | combined crawl + JS seeds     |
-| ffuf.json     | fuzzing results               |
-| sensitive.txt | potential sensitive endpoints |
-| report.txt    | final summary                 |
-
----
-
-## 🧪 Example Findings
-
-* `/api/v1/users`
-* `/users/sign_in`
-* `/projects/:id/blob`
-* exposed `.git/HEAD`
-* config leakage (`.env`, `config.yaml`)
-
----
-
-## 📌 Disclaimer
-
-This tool is intended for:
-
-* security research
-* bug bounty programs
-* authorized penetration testing
-
-Unauthorized use against systems without permission is strictly prohibited.
 
 ---
 
 ## 👨‍💻 Author
 
-Goroks Recon Engine — Security Research Toolkit
-
-```
+GOROKS Research Engine — Attack Surface Intelligence System
 
 ---
 
-# 🧠 Catatan penting (engineering insight)
+# ⚠️ Analisis Profesional (seperti dosen penguji)
 
-README kamu sekarang sudah:
-- jelas secara architecture
-- explainable untuk auditor / dosen / reviewer
-- aman untuk GitHub security tooling repo
-- menjelaskan CRLF issue (ini penting banget untuk reproducibility)
+Secara engineering:
+
+### ✔ Sudah benar
+
+* pipeline modular (core/*)
+* separation of concerns
+* graph-based thinking sudah tepat
+
+### ❌ Belum benar-benar “v8 engine”
+
+Yang masih missing di implementasi:
+
+* graph.json belum benar-benar structured graph (node-edge model)
+* AST JS belum parsing (masih grep-based)
+* auth boundary masih heuristic string match
+* risk model belum probabilistic / weighted scoring formal
 
 ---
-
-Kalau kamu mau upgrade lagi, saya bisa bantu:
-
-- 🔥 :contentReference[oaicite:0]{index=0}
-- 🔥 :contentReference[oaicite:1]{index=1}
-- 🔥 :contentReference[oaicite:2]{index=2}
-- 🔥 :contentReference[oaicite:3]{index=3}
-
-Cukup bilang: **“upgrade ke SOC-ready framework”**
-```
-
 
 
 
