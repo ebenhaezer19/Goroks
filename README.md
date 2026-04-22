@@ -1,12 +1,10 @@
-<img width="1275" height="585" alt="image" src="https://github.com/user-attachments/assets/515d0ab9-ab53-4254-b2d1-5565c48ffc3c" />
 
-<img width="967" height="645" alt="image" src="https://github.com/user-attachments/assets/46ce889d-4dc6-4d04-bd04-2f7175538237" />
-
-Berikut **README.md yang sudah dirancang profesional, clean, dan siap dipakai untuk repo recon tool kamu** (sudah termasuk konteks error CRLF yang kamu alami + cara usage + arsitektur tool).
 
 ---
 
 # GOROKS
+
+<img width="967" height="645" alt="image" src="https://github.com/user-attachments/assets/46ce889d-4dc6-4d04-bd04-2f7175538237" />
 
 ````markdown
 # 🧠 Go Source Recon Engine (Goroks)
@@ -138,6 +136,8 @@ Expected output:
 If you see `^M` → still broken.
 
 ---
+
+<img width="1275" height="585" alt="image" src="https://github.com/user-attachments/assets/515d0ab9-ab53-4254-b2d1-5565c48ffc3c" />
 
 ## 🔐 Security Notes
 
