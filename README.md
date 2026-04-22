@@ -1,208 +1,242 @@
 <img width="1275" height="585" alt="image" src="https://github.com/user-attachments/assets/515d0ab9-ab53-4254-b2d1-5565c48ffc3c" />
 
-
-# Goroks 
-
-Automated reconnaissance and exploitation pipeline for discovering exposed **Go application source code**, **backup files**, and **misconfigured Git repositories**.
-
----
-
-## 📌 Overview
-
-This toolkit is designed to streamline **web reconnaissance** specifically targeting:
-
-* Exposed `.go` source files
-* Backup artifacts (`.bak`, `.old`, `.swp`, etc.)
-* Misconfigured `.git` directories
-* Sensitive information leakage
-* Potential RCE indicators
-
-It integrates multiple phases into a **single automated pipeline**, reducing manual effort during initial pentesting.
-
----
-
 <img width="967" height="645" alt="image" src="https://github.com/user-attachments/assets/46ce889d-4dc6-4d04-bd04-2f7175538237" />
 
+Berikut **README.md yang sudah dirancang profesional, clean, dan siap dipakai untuk repo recon tool kamu** (sudah termasuk konteks error CRLF yang kamu alami + cara usage + arsitektur tool).
+
+---
+
+# GOROKS
+
+````markdown
+# 🧠 Go Source Recon Engine (Goroks)
+
+A lightweight **Go-oriented web reconnaissance engine** designed for:
+- endpoint discovery
+- crawling-based attack surface mapping
+- Go web application fingerprinting
+- sensitive exposure detection
+- git repository leakage analysis
+
+---
 
 ## ⚙️ Features
 
-### 1. Fingerprinting
+### 🔍 Recon Capabilities
+- Crawl-based endpoint discovery (not blind brute-force)
+- JS route mining (`/api`, `/v1`, `/users`, etc.)
+- FFUF adaptive fuzzing (seed-driven)
+- Git exposure detection (`.git/HEAD`)
+- Sensitive keyword detection (token, password, secret, api key)
+- Go project structure awareness
 
-* Detects Go-based applications using:
-
-  * HTTP headers
-  * Response body heuristics (Gin, Echo, Fiber)
-  * `/debug/pprof` endpoint
-
-### 2. Surface Discovery (FFUF)
-
-* Fuzzing endpoints using custom Go-focused wordlist
-* Supports:
-
-  * Redirect following
-  * Auto-calibration
-  * Status-based filtering
-
-### 3. Sensitive File Detection
-
-* Identifies exposed:
-
-  * `.env`
-  * `.go`
-  * config files
-* Searches for:
-
-  * `password`
-  * `token`
-  * `secret`
-  * `key`
-
-### 4. Git Exposure Exploitation
-
-* Detects `.git` exposure
-* Dumps repository using `GitTools`
-* Reconstructs working directory
-* Extracts:
-
-  * Secrets
-  * Credentials
-  * API keys
-
-### 5. Static Code Analysis
-
-* Searches for dangerous patterns:
-
-  * `exec`
-  * `system`
-  * `popen`
-  * `subprocess`
-
-### 6. Basic RCE Detection
-
-* Reflection-based testing
-* Time-based detection (`sleep` payload)
+### 🧠 Intelligence Layer
+- Seed generation from crawling
+- JS endpoint extraction
+- Smart FFUF execution per discovered surface
+- Multi-target aggregation report
 
 ---
 
-## 🛠️ Requirements
+## 📦 Requirements
 
-Install dependencies:
-
-```bash
-Make on root node and path ex: /root/go-pentest/Goroks
-apt update
-apt install -y curl jq git ffuf
-```
-
-Clone GitTools:
+Make sure these tools are installed:
 
 ```bash
-git clone https://github.com/internetwache/GitTools.git
+curl
+ffuf
+jq
+git
+grep
+awk
+sed
+````
+
+Optional (for git exploitation module):
+
+```bash
+GitTools (gitdumper.sh)
 ```
 
 ---
 
-## 🚀 Usage
+## 🚀 Installation
 
 ```bash
+git clone https://github.com/ebenhaezer19/Goroks.git
+cd Goroks
 chmod +x go_source_recon.sh
-./go_source_recon.sh http://target.com
 ```
 
 ---
 
-## 📂 Output Structure
+## ▶️ Usage
 
+```bash
+./go_source_recon.sh <target_url>
 ```
+
+Example:
+
+```bash
+./go_source_recon.sh https://git.ustc.edu.cn/
+```
+
+---
+
+## 📁 Output Structure
+
+Each run generates:
+
+```text
 recon_YYYYMMDD_HHMMSS/
 ├── headers.txt
+├── body.txt
+├── crawl_seed.txt
+├── js_routes.txt
+├── seeds.txt
 ├── ffuf.json
 ├── urls.txt
 ├── sensitive.txt
-├── rce.txt
-├── secrets.txt
 ├── rce_candidates.txt
 ├── report.txt
-└── git_dump/
-    └── .git/
+└── git_dump/ (if exposed)
 ```
 
 ---
 
-## 📊 Example Output
+## ⚠️ Known Issues
+
+### ❌ Bash CRLF Error
+
+If you see:
+
+```text
+/usr/bin/env: ‘bash\r’: No such file or directory
+```
+
+This is caused by **Windows line endings (CRLF)**.
+
+### 🔧 Fix:
+
+```bash
+dos2unix go_source_recon.sh
+```
+
+Verify:
+
+```bash
+head -n 1 go_source_recon.sh | cat -A
+```
+
+Expected output:
+
+```bash
+#!/usr/bin/env bash$
+```
+
+If you see `^M` → still broken.
+
+---
+
+## 🔐 Security Notes
+
+This tool may detect:
+
+* exposed Git repositories
+* sensitive environment variables
+* internal API routes
+* debug endpoints
+
+⚠️ Use only on systems you own or have explicit permission to test.
+
+---
+
+## 🧠 Architecture Overview
 
 ```
-[HIGH] Git exposed!
-[LOW] Reflection via cmd
-[LOW] Reflection via exec
+Target URL
+   ↓
+Fingerprinting
+   ↓
+Crawler (HTML + JS)
+   ↓
+Seed Generation
+   ↓
+Smart FFUF
+   ↓
+Validation Layer
+   ↓
+Report Generator
 ```
 
 ---
 
-## 🔍 Example Findings
+## 📊 Output Meaning
 
-| Type           | Severity | Description                |
-| -------------- | -------- | -------------------------- |
-| `.git exposed` | HIGH     | Full source code leakage   |
-| `.env exposed` | HIGH     | Credentials disclosure     |
-| Reflection     | LOW      | Input reflected (not RCE)  |
-| Time-based RCE | CRITICAL | Possible command execution |
-
----
-
-## ⚠️ Important Notes
-
-* Tool ini **tidak menjamin RCE**, hanya mendeteksi indikasi awal
-* Banyak false positive pada:
-
-  * Reflection
-  * Static responses
-* Validasi manual tetap wajib
+| File          | Description                   |
+| ------------- | ----------------------------- |
+| headers.txt   | HTTP response headers         |
+| body.txt      | initial HTML snapshot         |
+| js_routes.txt | extracted API endpoints       |
+| seeds.txt     | combined crawl + JS seeds     |
+| ffuf.json     | fuzzing results               |
+| sensitive.txt | potential sensitive endpoints |
+| report.txt    | final summary                 |
 
 ---
 
-## 🔐 Legal Disclaimer
+## 🧪 Example Findings
+
+* `/api/v1/users`
+* `/users/sign_in`
+* `/projects/:id/blob`
+* exposed `.git/HEAD`
+* config leakage (`.env`, `config.yaml`)
+
+---
+
+## 📌 Disclaimer
 
 This tool is intended for:
 
-* Authorized penetration testing
-* Security research
-* Educational purposes
+* security research
+* bug bounty programs
+* authorized penetration testing
 
-**Do not use against systems without explicit permission.**
-
----
-
-## 🧠 Next Improvements (Roadmap)
-
-* Integrasi dengan:
-
-  * `nuclei`
-  * `httpx`
-  * `katana`
-* Advanced Go binary analysis
-* Endpoint crawling (JS parsing)
-* Parameter fuzzing
+Unauthorized use against systems without permission is strictly prohibited.
 
 ---
 
 ## 👨‍💻 Author
 
-Developed for advanced **web application reconnaissance & exploitation workflows**.
+Goroks Recon Engine — Security Research Toolkit
+
+```
 
 ---
 
-## ⭐ Contribution
+# 🧠 Catatan penting (engineering insight)
 
-Pull requests are welcome. For major changes, open an issue first.
-
----
-
-## 📜 License
-
-MIT License
+README kamu sekarang sudah:
+- jelas secara architecture
+- explainable untuk auditor / dosen / reviewer
+- aman untuk GitHub security tooling repo
+- menjelaskan CRLF issue (ini penting banget untuk reproducibility)
 
 ---
+
+Kalau kamu mau upgrade lagi, saya bisa bantu:
+
+- 🔥 :contentReference[oaicite:0]{index=0}
+- 🔥 :contentReference[oaicite:1]{index=1}
+- 🔥 :contentReference[oaicite:2]{index=2}
+- 🔥 :contentReference[oaicite:3]{index=3}
+
+Cukup bilang: **“upgrade ke SOC-ready framework”**
+```
+
+
 
 
 cd ~/go-pentest
